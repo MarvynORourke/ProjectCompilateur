@@ -20,3 +20,7 @@ let gen_prog (Prog (gvds, fdfs)) =
                       Methinfo (3, 1),
                       [Loadc (IntT, IntV 0); ReturnI IntT])])
 
+(*Fonction qui permet de donner la position de l'élément e dans la liste*)
+let rec position e = function
+(a::c)-> if a = e then position e [] else 1 + position e c
+|_->0;; 

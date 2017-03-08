@@ -4,7 +4,7 @@ open Lang
 open Analyses
 
 (* Environments *)
-
+  
 type environment = 
     {localvar: (vname * tp) list; 
      globalvar: (vname * tp) list; 
@@ -17,49 +17,48 @@ let tp_prog (Prog (gvds, fdfs)) =
   Prog([],
        [Fundefn (Fundecl (BoolT, "even", [Vardecl (IntT, "n")]), [], Skip)])
 ;;
-exception VariableInconnu;
+exception VariableInconnu;;
 
-exception TypageImpossible;
+exception TypageImpossible;;
 
-exception FonctionInconnu;
+exception FonctionInconnu;;
 
 (*Fonction qui regarde si la variable existe dans l'environnement*)
 let rec exist_variable var = function
-	((a::c),l)-> if var = a then c
-				 else exist_variable l
-	|_->raise VariableInconnu;
+	((a,c)::l)-> if var = a then c
+				 else exist_variable var l
+	|_->raise VariableInconnu;;
 
 
 
 (*Fonction qui regarde si la fonction est dans l'environnement*)					
 let rec get_fundecl nom = function
-((tp,n,l)::c)-> if nom = n then (tp,l)
+	((Fundecl(tp,n,l))::c)-> if nom = n then (tp,l)
 				else get_fundecl nom c
-|_-> raise FonctionInconnu;
-
+	|_-> raise FonctionInconnu;;
 
 let rec tp_expr env = function 
 (* On regarde le type de la constante *)
-	(Const (_,i)) -> (match i with 
-						(BoolV b -> Const(BoolV, b)
-						IntV i -> Const(IntV, i)
-						VoidV -> VoidV))
+	(Const (_,i)) -> (match i with
+						(BoolV b) -> (Const(BoolT, BoolV b))
+						|(IntV i)-> (Const(IntT, IntV i))
+						|(VoidV)-> (Const(VoidT,VoidV)))
 	(*On regarde si la variable est dans l'environnement, si elle l'est, ont lui donne son type sinon on lève un exception*)
-	|(VarE (_,nom)) -> try (VarE (tp_expr nom env.localvar),Var(Local,nom)) with (* Local en attendant de savoir sic 'est global ou non *)
-												VariableInconnu -> raise TypageImpossible
-	(*On regarde le type d'une opération, on vérifie si les deux expressions sont bien du même type et ensuite on regarde si elle corresponde au genre d'opération effectué *)
-	|(BinOp(_,bin,expr1,expr2))->let a = tp_expr env expr1 and b = tp_expr env expr2 in (if type_of_expr a =  type_of_expr b then match bin with(
-																							BArith _ -> if type_of_expr a = IntV then BinOp(IntV,bin,a,b) else raise TypageImpossible
-																							_ -> BinOp(BoolT,bin,a,b ))
-																						else raise TypageImpossible)
+	|(VarE(_,Var(_,nom))) -> (try VarE((exist_variable nom env.localvar),Var(Local,nom)) with VariableInconnu -> raise TypageImpossible)
+	(*On regarde le type d'une opération, on vérifie si les deux expressions sont bien du même type et ensuite on regarde si elle correspond au genre d'opération effectué *)
+	|(BinOp(_,bin,expr1,expr2)) ->let a = (tp_expr env expr1) and b = (tp_expr env expr2) in (if (tp_of_expr a) = (tp_of_expr b) then (match bin with
+																																	(BArith _)-> if (tp_of_expr a) = IntT then BinOp(IntT,bin,a,b)
+																																				else raise TypageImpossible
+																																	|_-> BinOp(BoolT,bin,a,b))
+																							else raise TypageImpossible)
 	(*On s'occupe de l'expression IfThenElse, si la première expression n'est pas un expression bool on retourne une exception et si les deux valeurs retourné ne sont pas identique *)
-	|(IfThenElse(_,expr1,expr2,expr3))-> let a = tp_expr env expr1 and b = tp_expr env expr2 and c = tp_expr env expr3 in ( if type_of_expr b != type_of_expr c or type_of_expr a != BoolT then raise TypageImpossible
-	(*Pour finir CallE qui est un appel de fonction, il vérfie si le typage des variables correspond et si la fonction est dans l'environnement*)																														else IfThenElse(type_of_expr b,a,b,c))
-	|(CallE(_,name,l1)) ->try (let (type_fun,liste_env) = get_fundecl nom env.funbind in 
+	|(IfThenElse(_,expr1,expr2,expr3))-> let a = tp_expr env expr1 and b = tp_expr env expr2 and c = tp_expr env expr3 in (if tp_of_expr b != tp_of_expr c || tp_of_expr a != BoolT then raise TypageImpossible
+																														  else IfThenElse(tp_of_expr b,a,b,c))
+	(*Pour finir CallE qui est un appel de fonction, il vérfie si le typage des variables correspond et si la fonction est dans l'environnement*)
+	|(CallE(_,name,l1)) ->try (let (type_fun,liste_env) = (get_fundecl name env.funbind) in 
 																						let rec aux = function
-																							((a::c),(b::d))->let tp = tp_expr a in if type_of_expr tp == type_of_expr b then tp :: aux(c,d)
-																																										else raise TypageImpossible
+																							((a::c),(Vardecl(t,n)::d))->let tp = tp_expr env a in (if tp_of_expr tp = t then tp :: aux(c,d)
+																																										else raise TypageImpossible)
 																							|([],[])->[] 
 																							|_-> raise TypageImpossible
 																								in CallE(type_fun,name,aux(l1,liste_env))) with _ -> raise TypageImpossible;;
-								
