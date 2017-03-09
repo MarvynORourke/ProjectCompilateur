@@ -11,7 +11,14 @@ type environment =
      returntp: tp;
      funbind: fundecl list}
 
-
+let tp_of_expr = function
+    Const (t, _) -> t
+  | VarE (t, _) -> t
+  | BinOp (t, _, _, _) -> t
+  | IfThenElse (t, _, _, _) -> t
+  | CallE (t, _, _) -> t;;
+  
+ let tp_of_vardecl (Vardecl (t, _)) = t;;
 (* TODO: put your definitions here *)
 let tp_prog (Prog (gvds, fdfs)) =
   Prog([],
@@ -60,5 +67,4 @@ let rec tp_expr env = function
 																							((a::c),(Vardecl(t,n)::d))->let tp = tp_expr env a in (if tp_of_expr tp = t then tp :: aux(c,d)
 																																										else raise TypageImpossible)
 																							|([],[])->[] 
-																							|_-> raise TypageImpossible
-																								in CallE(type_fun,name,aux(l1,liste_env))) with _ -> raise TypageImpossible;;
+																							|_-> raise TypageImpossible																							in CallE(type_fun,name,aux(l1,liste_env))) with _ -> raise TypageImpossible;;
