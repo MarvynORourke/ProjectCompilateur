@@ -1,1 +1,14 @@
 Doit contenir une description succincte de votre travail.
+
+Exercice 1 : Aucun problème rencontré 
+
+Exercice 2 : Un peu plus compliqué, pas mal de temps à passer à réfléchir sur la chose, pas mal d'optimisation ensuite ( fonctions inutiles supprimes etc.. ) 
+
+Exercice 3 : Très facile.
+
+Exercice 4 : Un peu plus compliqué à comprendre mais plutôt simple à mettre en place.
+
+Exercice 5 : (Travail fait avec Romain Agez) Compréhension très flou pendant un long moment, puis après des recherches plus ou moins poussées dans les fichiers, on a réussi à comprendre. Du coup il y a un environnement + une expression dans le fichier gen.ml qui ensuite génère le bytecode.
+					Test fait avec les commandes énoncé dans l'annexe. 
+					
+			

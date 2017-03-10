@@ -46,7 +46,7 @@ let rec get_fundecl nom = function
 
 let rec tp_expr env = function 
 (* On regarde le type de la constante *)
-	(Const (_,i)) -> (match i with
+	(Const ((_:int),i)) -> (match i with
 						(BoolV b) -> (Const(BoolT, BoolV b))
 						|(IntV i)-> (Const(IntT, IntV i))
 						|(VoidV)-> (Const(VoidT,VoidV)))
@@ -56,7 +56,9 @@ let rec tp_expr env = function
 	|(BinOp(_,bin,expr1,expr2)) ->let a = (tp_expr env expr1) and b = (tp_expr env expr2) in (if (tp_of_expr a) = (tp_of_expr b) then (match bin with
 																																	(BArith _)-> if (tp_of_expr a) = IntT then BinOp(IntT,bin,a,b)
 																																				else raise TypageImpossible
-																																	|_-> BinOp(BoolT,bin,a,b))
+																																	|(BLogic _)->if (tp_of_expr a) = BoolT then BinOp(BoolT,bin,a,b)
+																																				else raise TypageImpossible
+																																	|_->BinOp(BoolT,bin,a,b))
 																							else raise TypageImpossible)
 	(*On s'occupe de l'expression IfThenElse, si la première expression n'est pas un expression bool on retourne une exception et si les deux valeurs retourné ne sont pas identique *)
 	|(IfThenElse(_,expr1,expr2,expr3))-> let a = tp_expr env expr1 and b = tp_expr env expr2 and c = tp_expr env expr3 in (if tp_of_expr b != tp_of_expr c || tp_of_expr a != BoolT then raise TypageImpossible
