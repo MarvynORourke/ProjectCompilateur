@@ -70,3 +70,46 @@ let rec tp_expr env = function
 																																										else raise TypageImpossible)
 																							|([],[])->[] 
 																							|_-> raise TypageImpossible																							in CallE(type_fun,name,aux(l1,liste_env))) with _ -> raise TypageImpossible;;
+																							
+(*Fonction qui type toutes les expressions d'une liste *)																																														
+let rec tp_expr_list env = function
+		(expr1::c)->(tp_expr env expr1)::(tp_expr_list env c)
+		|_->[];;
+		
+(*Fonction qui type les stmt*)		
+let rec tp_stmt env = function
+	(Skip)->Skip
+	|(Assign(_,var,expr))->(Assign(VoidT,var,tp_expr env expr))
+	|(Seq(stmt1,stmt2))->(Seq(tp_stmt env stmt1,tp_stmt env stmt2))
+	|(Cond(expr,stmt1,stmt2))->(Cond(tp_expr env expr, tp_stmt env stmt1,tp_stmt env stmt2))
+	|(While(expr,stmt))->(While(tp_expr env expr, tp_stmt env stmt))
+	|(CallC(fname,expr_list))->(CallC(fname,tp_expr_list env expr_list))
+	|(Return(expr))->(Return(tp_expr env expr));;
+
+(*Liste des mots inutilisables*)
+let unusable_name = ["auto";"break";"case";"char";"const";"continue";"default";"do";"double";"else";"enum";"extern";"float";"for";"goto";"if";"int";"long";"register";"return";"short";"signed";"sizeof";"static";"struct";"switch";"typedef";"union";"unsigned";"void";"volatile";"while"];;
+
+(*Fonction qui regarde si les éléments d'une liste 1 sont dans une liste 2 et si le type de la variable est pas de type VoidT*)
+let rec elmt_list_in_list l1 = function
+	(elmt::c)->if List.mem (name_of_vardecl elmt) l1 && (tp_of_vardecl elmt) = VoidT then false 
+				else elmt_list_in_list l1 c
+	|_->true;;
+(*Conversion de VarDecl list en (tp*name) list*)
+let rec vardecl_list_to_list = function
+(vardecl::c)->(name_of_vardecl vardecl,tp_of_vardecl vardecl)::(vardecl_list_to_list c)
+|_->[];; 
+
+exception ErrorFundefn;;
+	
+let tp_fdefn env = function 
+	Fundefn(Fundecl(tp,fname,var_liste),var_liste2,stmt)-> if elmt_list_in_list unusable_name var_liste2 && elmt_list_in_list unusable_name var_liste 
+														   then let env2 = {localvar = vardecl_list_to_list var_liste2; globalvar = env.globalvar; returntp = tp; funbind = Fundecl(tp,fname,var_liste)::env.funbind } 
+																in Fundefn(Fundecl(tp,fname,var_liste),var_liste2,tp_stmt env2 stmt)
+														   else raise ErrorFundefn;;
+(*Fonction qui vérifie toute les fundef d'une liste*)
+let rec tp_fdefn_list env = function
+(fdfn::c)-> (tp_fdefn env fdfn)::(tp_fdefn_list env c)
+|_->[];;		
+			
+let tp_prog = function 
+	Prog(vardecl_list,fundef_list)-> let env = {localvar =[]; globalvar = vardecl_list_to_list vardecl_list; returntp = VoidT; funbind = [] } in Prog(vardecl_list,tp_fdefn_list env fundef_list);;
