@@ -65,5 +65,15 @@ let rec defassign_e vs = function
 							  (expr::c)-> (defassign_e vs expr) && (aux c)
 							  |_->true in aux(list_expr);;
 
-let rec defassign_c allvs a = a
-
+exception NoVariable;;
+							  
+let rec defassign_c vs = function
+	(Skip)->vs
+	|(Assign(_,Var(_,nom),expr))->if defassign_e vs expr then (StringSet.add nom vs) else raise NoVariable
+	|(Seq(stmt,stmt2))->(StringSet.union (defassign_c vs stmt) (defassign_c vs stmt2))
+	|(Cond(expr,stmt,stmt2))->if defassign_e vs expr then(StringSet.union (defassign_c vs stmt) (defassign_c vs stmt2)) else raise NoVariable
+	|(While(expr,stmt))-> if defassign_e vs expr then defassign_c vs stmt else raise NoVariable
+	|(CallC(_,list_expr))->let rec aux = function
+							  (expr::c)-> defassign_e vs expr && (aux c)
+							  |_->true in if aux list_expr then vs else raise NoVariable
+	|(Return(expr))->if defassign_e vs expr then vs else raise NoVariable;;
