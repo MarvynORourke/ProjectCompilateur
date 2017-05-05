@@ -58,7 +58,7 @@ module StringSet =
 
 let rec defassign_e vs = function
 	(Const(_,_))->true
-	|(VarE(_,Var(binding,nom)))->if (StringSet.mem nom vs) then true else false
+	|(VarE(_,Var(binding,nom)))->(StringSet.mem nom vs)
 	|(BinOp(_,_,expr1,expr2))->(defassign_e vs expr1) && (defassign_e vs expr2)
 	|(IfThenElse(_,expr1,expr2,expr3))->(defassign_e vs expr1) && (defassign_e vs expr2) && (defassign_e vs expr3)
 	|(CallE(_,_,list_expr))-> let rec aux = function

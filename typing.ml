@@ -32,8 +32,10 @@ exception FonctionInconnu;;
 
 (*Fonction qui regarde si la variable existe dans l'environnement*)
 let rec exist_variable var = function
-	((a,c)::l)-> if var = a then c
-				 else exist_variable var l
+	(((a,c)::l),(b,d)::l2)-> if var = a  then c
+				 else if var = b then d else exist_variable var (l,l2)
+	|([],(b,d)::l2)-> if var = b then d else exist_variable var ([],l2)
+	|((a,c)::l,[])-> if var = a  then c else exist_variable var (l,[])
 	|_->raise VariableInconnu;;
 
 
@@ -51,25 +53,25 @@ let rec tp_expr env = function
 						|(IntV i)-> (Const(IntT, IntV i))
 						|(VoidV)-> (Const(VoidT,VoidV)))
 	(*On regarde si la variable est dans l'environnement, si elle l'est, ont lui donne son type sinon on lève un exception*)
-	|(VarE(_,Var(_,nom))) -> (try VarE((exist_variable nom env.localvar),Var(Local,nom)) with VariableInconnu -> raise TypageImpossible)
+	|(VarE(_,Var(_,nom))) -> (try VarE((exist_variable nom (env.localvar,env.globalvar)),Var(Local,nom)) with VariableInconnu ->  failwith nom)
 	(*On regarde le type d'une opération, on vérifie si les deux expressions sont bien du même type et ensuite on regarde si elle correspond au genre d'opération effectué *)
 	|(BinOp(_,bin,expr1,expr2)) ->let a = (tp_expr env expr1) and b = (tp_expr env expr2) in (if (tp_of_expr a) = (tp_of_expr b) then (match bin with
 																																	(BArith _)-> if (tp_of_expr a) = IntT then BinOp(IntT,bin,a,b)
-																																				else raise TypageImpossible
+																																				else failwith "1"
 																																	|(BLogic _)->if (tp_of_expr a) = BoolT then BinOp(BoolT,bin,a,b)
-																																				else raise TypageImpossible
+																																				else  failwith "2"
 																																	|_->BinOp(BoolT,bin,a,b))
-																							else raise TypageImpossible)
+																							else failwith "4")
 	(*On s'occupe de l'expression IfThenElse, si la première expression n'est pas un expression bool on retourne une exception et si les deux valeurs retourné ne sont pas identique *)
-	|(IfThenElse(_,expr1,expr2,expr3))-> let a = tp_expr env expr1 and b = tp_expr env expr2 and c = tp_expr env expr3 in (if tp_of_expr b != tp_of_expr c || tp_of_expr a != BoolT then raise TypageImpossible
+	|(IfThenElse(_,expr1,expr2,expr3))-> let a = tp_expr env expr1 and b = tp_expr env expr2 and c = tp_expr env expr3 in (if tp_of_expr b != tp_of_expr c || tp_of_expr a != BoolT then  failwith "3"
 																														  else IfThenElse(tp_of_expr b,a,b,c))
 	(*Pour finir CallE qui est un appel de fonction, il vérfie si le typage des variables correspond et si la fonction est dans l'environnement*)
 	|(CallE(_,name,l1)) ->try (let (type_fun,liste_env) = (get_fundecl name env.funbind) in 
 																						let rec aux = function
 																							((a::c),(Vardecl(t,n)::d))->let tp = tp_expr env a in (if tp_of_expr tp = t then tp :: aux(c,d)
-																																										else raise TypageImpossible)
+																																										else  failwith "5")
 																							|([],[])->[] 
-																							|_-> raise TypageImpossible																							in CallE(type_fun,name,aux(l1,liste_env))) with _ -> raise TypageImpossible;;
+																							|_->failwith "6"																							in CallE(type_fun,name,aux(l1,liste_env))) with _ -> failwith "6";;
 																							
 (*Fonction qui type toutes les expressions d'une liste *)																																														
 let rec tp_expr_list env = function
@@ -103,13 +105,10 @@ exception ErrorFundefn;;
 	
 let tp_fdefn env = function 
 	Fundefn(Fundecl(tp,fname,var_liste),var_liste2,stmt)-> if elmt_list_in_list unusable_name var_liste2 && elmt_list_in_list unusable_name var_liste 
-														   then let env2 = {localvar = vardecl_list_to_list var_liste2; globalvar = env.globalvar; returntp = tp; funbind = Fundecl(tp,fname,var_liste)::env.funbind } 
+														   then let env2 = {localvar = vardecl_list_to_list var_liste2;globalvar =vardecl_list_to_list var_liste @ env.globalvar; returntp = tp; funbind = Fundecl(tp,fname,var_liste)::env.funbind } 
 																in Fundefn(Fundecl(tp,fname,var_liste),var_liste2,tp_stmt env2 stmt)
 														   else raise ErrorFundefn;;
-(*Fonction qui vérifie toute les fundef d'une liste*)
-let rec tp_fdefn_list env = function
-(fdfn::c)-> (tp_fdefn env fdfn)::(tp_fdefn_list env c)
-|_->[];;		
+
 			
 let tp_prog = function 
-	Prog(vardecl_list,fundef_list)-> let env = {localvar =[]; globalvar = vardecl_list_to_list vardecl_list; returntp = VoidT; funbind = [] } in Prog(vardecl_list,tp_fdefn_list env fundef_list);;
+	Prog(vardecl_list,fundef_list)-> let env = {localvar =[]; globalvar = vardecl_list_to_list vardecl_list; returntp = VoidT; funbind = [] } in Prog(vardecl_list,List.map (tp_fdefn env) fundef_list);;
