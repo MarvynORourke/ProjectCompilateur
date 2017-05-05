@@ -10,7 +10,14 @@ open Lang
 (* ****  Statement returns                                 **** *)
 (* ************************************************************ *)
 
-let rec stmt_returns = false
+let rec stmt_returns = function
+	(Skip)->false
+	|(Assign(_,_,_))->false
+	|(Seq(stmt1,stmt2))->(stmt_returns stmt1) || (stmt_returns stmt2)
+	|(Cond(_,stmt1,stmt2))->(stmt_returns stmt1) || (stmt_returns stmt2)
+	|(While(_,stmt))->(stmt_returns stmt)
+	|(CallC(_,_))->false
+	|(Return(_))->true;;
 
 
 
@@ -20,11 +27,24 @@ let rec stmt_returns = false
 
 
 
-let rec stack_depth_e = 0
-
-let rec stack_depth_c = 0
-
-
+let rec stack_depth_e = function
+	(Const(_,_))->1
+	|(VarE(_,_))->1
+	|(BinOp(_,_,expr1,expr2))->1+(stack_depth_e expr1) +(stack_depth_e expr2)
+	|(IfThenElse(_,expr1,expr2,expr3))->5+(stack_depth_e expr1)+(stack_depth_e expr2) +(stack_depth_e expr3) 
+	|(CallE(_,_,list_expr))-> let rec aux = function
+							  (expr::c)-> (stack_depth_e expr) + (aux c)
+							  |_->0 in aux(list_expr)+1;;
+let rec stack_depth_c = function
+	(Skip)->1
+	|(Assign(_,_,expr))->1 + (stack_depth_e expr)
+	|(Seq(stmt,stmt2))->(stack_depth_c stmt) + (stack_depth_c stmt2)
+	|(Cond(expr,stmt,stmt2))->5+(stack_depth_e expr) + (stack_depth_c stmt) + (stack_depth_c stmt2)
+	|(While(expr,stmt))->5+(stack_depth_e expr) + (stack_depth_c stmt)
+	|(CallC(_,list_expr))->let rec aux = function
+							  (expr::c)-> (stack_depth_e expr) + (aux c)
+							  |_->0 in aux(list_expr)+1
+	|(Return(expr))->1 +(stack_depth_e expr);;
 
 (* ************************************************************ *)
 (* ****  Definite Assignment                               **** *)
@@ -36,7 +56,14 @@ module StringSet =
 	    let compare = Pervasives.compare 
      end)
 
-let rec defassign_e a = true
+let rec defassign_e vs = function
+	(Const(_,_))->true
+	|(VarE(_,Var(binding,nom)))->if (StringSet.mem nom vs) then true else false
+	|(BinOp(_,_,expr1,expr2))->(defassign_e vs expr1) && (defassign_e vs expr2)
+	|(IfThenElse(_,expr1,expr2,expr3))->(defassign_e vs expr1) && (defassign_e vs expr2) && (defassign_e vs expr3)
+	|(CallE(_,_,list_expr))-> let rec aux = function
+							  (expr::c)-> (defassign_e vs expr) && (aux c)
+							  |_->true in aux(list_expr);;
 
 let rec defassign_c allvs a = a
 

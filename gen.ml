@@ -1,21 +1,8 @@
 (* Compilation functions *)
-
 open Lang
 open Analyses
 open Instrs
 open Typing
-
-(* ************************************************************ *)
-(* **** Compilation of expressions / statements            **** *)
-(* ************************************************************ *)
-
-
-
-(* ************************************************************ *)
-(* **** Compilation of methods / programs                  **** *)
-(* ************************************************************ *)
-
-
 
 exception VarInexistante;;					  
 					  
@@ -38,7 +25,7 @@ let rec types_inlist = function
 let rec gen_expr liste_var etiquette = function
 	(Const(tp,c))->[Loadc(tp,c)]
 	|(VarE(tp,Var(_,nom)))->[Loadv(tp,(position nom liste_var))]
-	|(BinOp(tp,bin,expr1,expr2))->(gen_expr liste_var (1::etiquette) expr1)@(gen_expr liste_var (2::etiquette) expr2)@[Label(etiquette);Bininst(tp,bin)]
+	|(BinOp(tp,bin,expr1,expr2))->(gen_expr liste_var (1::etiquette) expr1)@(gen_expr liste_var (2::etiquette) expr2)@[Bininst(tp,bin)]
 	|(IfThenElse(tp,expr1,expr2,expr3))->(gen_expr liste_var (1::etiquette) expr1)@[Loadc(IntT,IntV 0);If(BCeq,(2::etiquette))]@(gen_expr liste_var (2::etiquette) expr2)@[Goto(3::etiquette);Label(2::etiquette)]@(gen_expr liste_var (3::etiquette) expr3)@[Label(3::etiquette)]
 	|(CallE(tp,name,liste_expr))->let list_expr_inverse = inverse liste_expr in 
 																			let rec aux = function 
@@ -56,7 +43,7 @@ let rec gen_stmt liste_var etiquette = function
 																			let rec aux = function 
 																				(a::c)->(gen_expr liste_var etiquette a)@aux(c)
 																				|_->[] in aux list_expr_inverse@[Invoke(VoidT,name,types_inlist list_expr_inverse)]
-	|(Return(expr))->gen_expr liste_var etiquette expr;;
+	|(Return(expr))->(gen_expr liste_var etiquette expr)@[ReturnI IntT];;
 
 let rec type_list = function
 	((Vardecl(tp,_))::c)->tp::(type_list c)
@@ -67,10 +54,9 @@ let rec name_list = function
 	|_->[];;
 	
 let gen_fundefn = function 
-	(Fundefn(Fundecl(tp,name,parameters),local_var,stmt))->[Methdefn(Methdecl(tp,name,type_list parameters),Methinfo(5,5),(gen_stmt (name_list local_var) [0] stmt))];;
+	(Fundefn(Fundecl(tp,name,parameters),local_var,stmt))->[Methdefn(Methdecl(tp,name,type_list parameters),Methinfo((List.length local_var),5),(gen_stmt (name_list local_var) [0] stmt))];;
 
-
-	
+(*Tests unitaires*)
 	
 let env = {localvar = [("n",IntT)]; globalvar = []; returntp = VoidT; funbind = []};;
 
