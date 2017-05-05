@@ -18,4 +18,6 @@ Partie 2 :
 La partie 2 c'est globalement plutôt bien déroulé, sauf à la fin où il y a eu des gros problèmes de déboggages, sans vraiment aucune indication de la part de ocaml. 
 Tous les exercices ont été fait mais le compilateur n'est pas du tout fonctionnel. Il n'arrive pas à typer les expressions/statement.
 
-Un grand merci à Olivier Risser-Maroix qui m'a débuggé pas mal de trucs sur la fin. 
+Un grand merci à Olivier Risser-Maroix qui m'a débuggé pas mal de trucs sur la fin.
+
+ Fatal error: exception Failure("VoidT: not a valid type prefix"), je n'ai pas réussi à trouver cette erreur.
